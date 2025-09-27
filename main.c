@@ -53,41 +53,55 @@ int *leerArchivo(char nombreArchivo[], int *cantidad) {
 
 void conteoDigitos(int arrayNumeros[], int cantidadNumeros) {
     printf("Conteo de dígitos:\n");
+    // Almacena la suma del total de conteo de digitos
     int sumaDigitos = 0;
-    
-    for (int i = 0; i < 5; i++) {
-        int fd[2]; // arreglo de 2 elementos, [0] para lectura y [1] para escritura
-        pid_t pid_hijo;
-        char buffer[100];
-        char mensaje_hijo[100];
-        int digitos = 0;
 
+    // Crea los 5 procesos hijos que leen los numeros y se comunican mediante pipes con el proceso padre
+    for (int i = 0; i < 5; i++) {
+        // arreglo de 2 elementos, [0] para lectura y [1] para escritura 
+        int fd[2];
         pipe(fd);
+
+        // crea un hijo
+        pid_t pid_hijo;
         pid_hijo = fork();
 
-        for (int j = 0; j < cantidadNumeros; j++) {
-            if (arrayNumeros[j] == i*2 || arrayNumeros[j] == i*2 + 1) {
-                digitos++;
-            }
+        if (pid_hijo < 0) {
+            printf("Error al crear el proceso hijo");
+            exit(EXIT_FAILURE);
         }
-        // almacena el mensaje en buffer
-        snprintf(mensaje_hijo, sizeof(mensaje_hijo), "%d-%d: %d", i*2, i*2 + 1, digitos);
-        sumaDigitos = sumaDigitos + digitos;
-
+        
         if (pid_hijo == 0) {
-            //printf("Soy el hijo: %d, y mi padre es: %d\n", getpid(), getppid());
-            close(fd[0]); // cierra el descriptor de lectura
-            write(fd[1], mensaje_hijo, strlen(mensaje_hijo) + 1); // envia el mensaje al padre
-            close(fd[1]); // cierra el descriptor de escritura
+            int digitos = 0;
+            // cuenta los digitos del arreglo
+            for (int j = 0; j < cantidadNumeros; j++) {
+                if (arrayNumeros[j] == i*2 || arrayNumeros[j] == i*2 + 1) {
+                    digitos++;
+                }
+            }
+            // cierra el descriptor de lectura del hijo
+            close(fd[0]);
+            // envia los numeros contados al padre
+            write(fd[1], &digitos, sizeof(int));
+            // cierra el descriptor de escritura del hijo
+            close(fd[1]);
             exit(EXIT_SUCCESS);
+        } else {
+            // espera a que el hijo termine antes de leer el pipe
+            wait(NULL);
+            // cierra el descriptor de escritura del padre
+            close(fd[1]);
+            int digitos_contados = 0;
+            read(fd[0], &digitos_contados, sizeof(int));
+            // cierra el descriptor de lectura del padre
+            close(fd[0]);
+            // muestra los digitos contados
+            printf("%d-%d: %d\n", i*2, i*2 + 1, digitos_contados);
+            sumaDigitos = sumaDigitos + digitos_contados;
         }
-        //printf("Soy el proceso padre: %d, mi hijo es: %d\n", getpid(), pid_hijo);
-        close(fd[1]); // para recibir el mensaje, cierra el descriptor de escritura
-        read(fd[0], buffer, sizeof(buffer));
-        printf("%s\n", buffer);
-
-        close(fd[0]);
+        
     }
+
     printf("Total Dígitos: %d\n", sumaDigitos);
     
 }
@@ -109,8 +123,10 @@ int main () {
     int *arrayNumeros = leerArchivo(str, &cantidadNumeros);
 
     if (arrayNumeros == NULL || cantidadNumeros == 0) {
+        printf("El archivo se encuentra vacío o no existe\n");
         return 0;
     }
+
     conteoDigitos(arrayNumeros, cantidadNumeros);
 
     free(arrayNumeros);
