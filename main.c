@@ -4,6 +4,13 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+/*
+Universidad de Santiago de Chile
+Laboratorio N°1: Sistemas Operativos
+Estudiante: Joaquín Pozo Garrao
+Rut: 20.237.059-4
+Ejecutado y compilado en Ubuntu 22.04.5 LTS
+*/
 
 // Funcion que verifica si un caracter es un numero
 int isDigit(char c) {
